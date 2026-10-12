@@ -1,0 +1,61 @@
+import tensorflow as tf
+import numpy as np
+
+# Load text
+path = tf.keras.utils.get_file(
+    "shakespeare.txt",
+    "https://raw.githubusercontent.com/karpathy/char-rnn/master/data/tinyshakespeare/input.txt"
+)
+
+text = open(path).read().lower()
+
+# Characters
+chars = sorted(set(text))
+
+c2i = {c:i for i,c in enumerate(chars)}
+i2c = {i:c for i,c in enumerate(chars)}
+
+# Create sequences
+seq_len = 40
+X = []
+y = []
+
+for i in range(len(text)-seq_len):
+    X.append([c2i[c] for c in text[i:i+seq_len]])
+    y.append(c2i[text[i+seq_len]])
+
+X = np.array(X)
+y = np.array(y)
+
+# LSTM
+model = tf.keras.Sequential([
+    tf.keras.layers.Embedding(len(chars), 64),
+    tf.keras.layers.LSTM(128),
+    tf.keras.layers.Dense(len(chars), activation='softmax')
+])
+
+model.compile(
+    optimizer='adam',
+    loss='sparse_categorical_crossentropy'
+)
+
+model.fit(X, y, batch_size=128, epochs=1)
+
+# Generate text
+def generate(seed, length=100):
+
+    seq = [c2i[c] for c in seed.lower()]
+
+    for i in range(length):
+        inp = np.array(seq[-seq_len:]).reshape(1, -1)
+
+        pred = model.predict(inp, verbose=0)[0]
+
+        next_char = np.random.choice(
+            len(pred), p=pred)
+
+        seq.append(next_char)
+
+    return ''.join(i2c[i] for i in seq)
+
+print(generate("shall i compare thee ", 100))
