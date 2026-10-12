@@ -1,0 +1,61 @@
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import torchvision
+import torchvision.transforms as transforms
+
+# Data
+transform = transforms.ToTensor()
+
+trainset = torchvision.datasets.CIFAR10(
+    './data', train=True, download=True, transform=transform)
+
+loader = torch.utils.data.DataLoader(
+    trainset, batch_size=128, shuffle=True)
+
+# Model
+class MLP(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(3*32*32, 256),
+            nn.ReLU(),
+            nn.Linear(256, 10)
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+# Training function
+def train(model, optimizer):
+    loss_fn = nn.CrossEntropyLoss()
+
+    for epoch in range(3):
+        total = 0
+
+        for x, y in loader:
+            output = model(x)
+            loss = loss_fn(output, y)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            total += loss.item()
+
+        print(epoch+1, total/len(loader))
+
+# SGD
+model1 = MLP()
+opt1 = optim.SGD(model1.parameters(), lr=0.01, momentum=0.9)
+
+print("SGD + Momentum")
+train(model1, opt1)
+
+# Adam
+model2 = MLP()
+opt2 = optim.Adam(model2.parameters(), lr=0.001)
+
+print("Adam")
+train(model2, opt2)
