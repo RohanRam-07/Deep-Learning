@@ -1,0 +1,95 @@
+import torch
+import torch.nn as nn
+import torchvision
+from torchvision import datasets, transforms
+
+# Dataset
+data = datasets.MNIST(
+    './data',
+    train=True,
+    download=True,
+    transform=transforms.ToTensor()
+)
+
+loader = torch.utils.data.DataLoader(
+    data, batch_size=64, shuffle=True)
+
+# Generator
+class Generator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(100, 256),
+            nn.ReLU(),
+            nn.Linear(256, 784),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+# Discriminator
+class Discriminator(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.Linear(784, 256),
+            nn.ReLU(),
+            nn.Linear(256, 1),
+            nn.Sigmoid()
+        )
+
+    def forward(self, x):
+        return self.net(x)
+
+G = Generator()
+D = Discriminator()
+
+loss_fn = nn.BCELoss()
+
+g_opt = torch.optim.Adam(
+    G.parameters(), lr=0.0002)
+
+d_opt = torch.optim.Adam(
+    D.parameters(), lr=0.0002)
+
+# Training
+for epoch in range(5):
+
+    for real, _ in loader:
+
+        real = real.view(-1, 784)
+        n = real.size(0)
+
+        # -------- Discriminator --------
+        noise = torch.randn(n, 100)
+        fake = G(noise)
+
+        real_loss = loss_fn(
+            D(real),
+            torch.ones(n, 1))
+
+        fake_loss = loss_fn(
+            D(fake.detach()),
+            torch.zeros(n, 1))
+
+        d_loss = real_loss + fake_loss
+
+        d_opt.zero_grad()
+        d_loss.backward()
+        d_opt.step()
+
+        # -------- Generator --------
+        fake = G(noise)
+
+        g_loss = loss_fn(
+            D(fake),
+            torch.ones(n, 1))
+
+        g_opt.zero_grad()
+        g_loss.backward()
+        g_opt.step()
+
+    print("Epoch:", epoch+1,
+          "D Loss:", d_loss.item(),
+          "G Loss:", g_loss.item())
