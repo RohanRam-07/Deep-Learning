@@ -1,0 +1,73 @@
+import numpy as np
+import pandas as pd
+import torch
+import torch.nn as nn
+from sklearn.preprocessing import MinMaxScaler
+
+# Load data
+url = "https://raw.githubusercontent.com/jbrownlee/Datasets/refs/heads/master/monthly-airline-passengers.csv"
+
+data = pd.read_csv(url, usecols=[1]).values.astype('float32')
+
+scaler = MinMaxScaler()
+data = scaler.fit_transform(data)
+
+# Create sequences
+seq = 10
+
+X = []
+y = []
+
+for i in range(len(data)-seq):
+    X.append(data[i:i+seq])
+    y.append(data[i+seq])
+
+X = torch.tensor(np.array(X), dtype=torch.float32)
+y = torch.tensor(np.array(y), dtype=torch.float32)
+
+# BiRNN
+class BiRNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.rnn = nn.RNN(1, 32, batch_first=True,
+                          bidirectional=True)
+        self.fc = nn.Linear(64, 1)
+
+    def forward(self, x):
+        out, _ = self.rnn(x)
+        return self.fc(out[:, -1, :])
+
+# Feedforward
+class FFNN(nn.Module):
+    def __init__(self):
+        super().__init__()
+        self.fc = nn.Sequential(
+            nn.Flatten(),
+            nn.Linear(10, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )
+
+    def forward(self, x):
+        return self.fc(x)
+
+# Train function
+def train(model):
+    opt = torch.optim.Adam(model.parameters(), lr=0.01)
+    loss_fn = nn.MSELoss()
+
+    for epoch in range(20):
+        output = model(X)
+        loss = loss_fn(output, y)
+
+        opt.zero_grad()
+        loss.backward()
+        opt.step()
+
+    return loss.item()
+
+bilstm = BiRNN()
+ffnn = FFNN()
+
+print("BiRNN MSE:", train(bilstm))
+print("FFNN MSE:", train(ffnn))
