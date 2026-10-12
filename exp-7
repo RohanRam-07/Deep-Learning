@@ -1,0 +1,43 @@
+import torch
+from PIL import Image
+from transformers import (
+    VisionEncoderDecoderModel,
+    ViTImageProcessor,
+    AutoTokenizer
+)
+
+# Load pretrained model
+model = VisionEncoderDecoderModel.from_pretrained(
+    "nlpconnect/vit-gpt2-image-captioning"
+)
+
+processor = ViTImageProcessor.from_pretrained(
+    "nlpconnect/vit-gpt2-image-captioning"
+)
+
+tokenizer = AutoTokenizer.from_pretrained(
+    "nlpconnect/vit-gpt2-image-captioning"
+)
+
+# Device
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+model.to(device)
+
+# Load image
+image = Image.open("image.jpg").convert("RGB")
+
+# Process image
+pixels = processor(
+    images=image,
+    return_tensors="pt"
+).pixel_values.to(device)
+
+# Generate caption
+output = model.generate(pixels, max_length=30)
+
+caption = tokenizer.decode(
+    output[0],
+    skip_special_tokens=True
+)
+
+print("Caption:", caption)
