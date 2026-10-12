@@ -1,0 +1,24 @@
+import torch
+import torch.nn as nn
+from torchvision import models
+
+# Load pretrained models
+vgg = models.vgg16(weights='DEFAULT')
+resnet = models.resnet18(weights='DEFAULT')
+googlenet = models.googlenet(weights='DEFAULT')
+
+# Change final layers for 10 classes
+vgg.classifier[6] = nn.Linear(4096, 10)
+resnet.fc = nn.Linear(resnet.fc.in_features, 10)
+googlenet.fc = nn.Linear(googlenet.fc.in_features, 10)
+
+models_list = {
+    "VGG16": vgg,
+    "ResNet18": resnet,
+    "GoogLeNet": googlenet
+}
+
+# Print architectures
+for name, model in models_list.items():
+    print(name)
+    print(model)
